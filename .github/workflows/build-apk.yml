@@ -14,14 +14,17 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Set up JDK 17
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           java-version: '17'
           distribution: 'temurin'
 
-      - name: Locate Android Project & Ensure Gradle Wrapper
+      - name: Setup Android SDK & Accept Licenses
+        uses: android-actions/setup-android@v3
+
+      - name: Locate Project & Ensure Gradle Wrapper
         run: |
-          # 1. Finde heraus, wo settings.gradle(.kts) liegt
+          # 1. Finde Projektordner
           SETTINGS_FILE=$(find . -maxdepth 3 -name "settings.gradle*" | head -n 1)
           if [ -z "$SETTINGS_FILE" ]; then
             echo "Fehler: Keine settings.gradle gefunden!"
@@ -29,23 +32,26 @@ jobs:
           fi
           PROJECT_DIR=$(dirname "$SETTINGS_FILE")
           echo "PROJECT_DIR=$PROJECT_DIR" >> $GITHUB_ENV
-          echo "Gefundenes Projektverzeichnis: $PROJECT_DIR"
+          echo "Projektverzeichnis: $PROJECT_DIR"
           
-          # 2. Prüfen, ob gradlew vorhanden ist - falls nicht, generieren
+          # 2. Falls kein gradlew existiert, lade sauberes Gradle 8.7 herunter
           cd "$PROJECT_DIR"
           if [ ! -f "./gradlew" ]; then
-            echo "gradlew fehlt. Installiere Gradle und erzeuge Wrapper..."
-            sudo apt-get update && sudo apt-get install -y gradle
-            gradle wrapper
+            echo "gradlew fehlt. Lade Gradle 8.7 herunter..."
+            curl -sSL "https://services.gradle.org/distributions/gradle-8.7-bin.zip" -o gradle.zip
+            unzip -q gradle.zip
+            ./gradle-8.7/bin/gradle wrapper --gradle-version 8.7
+            rm -rf gradle-8.7 gradle.zip
           fi
           chmod +x ./gradlew
 
       - name: Build Debug APK
         run: |
           cd "$PROJECT_DIR"
-          ./gradlew assembleDebug --stacktrace
+          ./gradlew assembleDebug --no-daemon --stacktrace
 
       - name: Upload APK Artifact
+        if: success()
         uses: actions/upload-artifact@v4
         with:
           name: app-debug
