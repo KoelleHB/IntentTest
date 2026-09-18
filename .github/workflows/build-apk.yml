@@ -23,9 +23,9 @@ jobs:
         run: |
           yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses || true
 
-      - name: Locate Project & Prepare Gradle Wrapper
+      - name: Locate Project & Setup Gradle Wrapper
         run: |
-          # 1. Finde settings.gradle(.kts)
+          # 1. Projektverzeichnis finden
           SETTINGS_FILE=$(find . -maxdepth 3 -name "settings.gradle*" | head -n 1)
           if [ -z "$SETTINGS_FILE" ]; then
             echo "Fehler: Keine settings.gradle gefunden!"
@@ -35,14 +35,15 @@ jobs:
           echo "PROJECT_DIR=$PROJECT_DIR" >> $GITHUB_ENV
           echo "Projektverzeichnis gefunden: $PROJECT_DIR"
 
-          # 2. Falls kein gradlew existiert, erstelle ihn mit Gradle 8.7
+          # 2. Sauberen Gradle 8.4 Wrapper bereitstellen (kompatibel mit AGP 8.x)
           cd "$PROJECT_DIR"
           if [ ! -f "./gradlew" ]; then
-            echo "gradlew fehlt. Lade Gradle 8.7..."
-            curl -sSL "https://services.gradle.org/distributions/gradle-8.7-bin.zip" -o gradle.zip
+            echo "gradlew fehlt. Installiere Gradle 8.4..."
+            curl -sSL "https://services.gradle.org/distributions/gradle-8.4-bin.zip" -o gradle.zip
             unzip -q gradle.zip
-            ./gradle-8.7/bin/gradle wrapper --gradle-version 8.7
-            rm -rf gradle-8.7 gradle.zip
+            # Wrapper ohne Ausführung des Projekt-Builds generieren:
+            ./gradle-8.4/bin/gradle wrapper --gradle-version 8.4 -p . --no-daemon
+            rm -rf gradle-8.4 gradle.zip
           fi
           chmod +x ./gradlew
 
