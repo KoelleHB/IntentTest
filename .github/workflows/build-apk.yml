@@ -14,17 +14,18 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Set up JDK 17
-        uses: actions/setup-java@v5
+        uses: actions/setup-java@v4
         with:
           java-version: '17'
           distribution: 'temurin'
 
-      - name: Setup Android SDK & Accept Licenses
-        uses: android-actions/setup-android@v3
-
-      - name: Locate Project & Ensure Gradle Wrapper
+      - name: Accept Android SDK Licenses
         run: |
-          # 1. Finde Projektordner
+          yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses || true
+
+      - name: Locate Project & Prepare Gradle Wrapper
+        run: |
+          # 1. Finde settings.gradle(.kts)
           SETTINGS_FILE=$(find . -maxdepth 3 -name "settings.gradle*" | head -n 1)
           if [ -z "$SETTINGS_FILE" ]; then
             echo "Fehler: Keine settings.gradle gefunden!"
@@ -32,12 +33,12 @@ jobs:
           fi
           PROJECT_DIR=$(dirname "$SETTINGS_FILE")
           echo "PROJECT_DIR=$PROJECT_DIR" >> $GITHUB_ENV
-          echo "Projektverzeichnis: $PROJECT_DIR"
-          
-          # 2. Falls kein gradlew existiert, lade sauberes Gradle 8.7 herunter
+          echo "Projektverzeichnis gefunden: $PROJECT_DIR"
+
+          # 2. Falls kein gradlew existiert, erstelle ihn mit Gradle 8.7
           cd "$PROJECT_DIR"
           if [ ! -f "./gradlew" ]; then
-            echo "gradlew fehlt. Lade Gradle 8.7 herunter..."
+            echo "gradlew fehlt. Lade Gradle 8.7..."
             curl -sSL "https://services.gradle.org/distributions/gradle-8.7-bin.zip" -o gradle.zip
             unzip -q gradle.zip
             ./gradle-8.7/bin/gradle wrapper --gradle-version 8.7
